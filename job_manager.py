@@ -8,9 +8,19 @@ jobs = []
 @app.route('/jobs', methods=['POST'])
 def create_job():
     job_data = request.json
+    
+    # Validations
+
+    # Required fields
     required_fields = ['title', 'description', 'company_name', 'country', 'salary', 'posted_at', 'enabled', 'skills']
     if not all(field in job_data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400 # bad request
+
+    # Validate Skill 
+    for skill in job_data['skills']:
+        if 'id' not in skill and not ('name' in skill and 'level' in skill):
+            return jsonify({"error": "Each skill must have an 'id' to ref or both 'name' and 'level' to create one."}), 400
+
 
     # Preparar el job con un id único basado en el número de jobs existentes
     new_job = {
@@ -22,7 +32,7 @@ def create_job():
         'salary': job_data['salary'],
         'posted_at': job_data['posted_at'],
         'enabled': job_data['enabled'],
-        'skills': job_data['skills']  # 'skills' is still to be validated. 
+        'skills': job_data['skills']  
     }
 
     jobs.append(new_job)

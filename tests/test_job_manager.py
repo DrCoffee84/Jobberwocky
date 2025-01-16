@@ -53,3 +53,23 @@ class MyTest(TestCase):
         # BAD_REQUEST is expected
         self.assertEqual(response.status_code, 400)
     
+    # I create a job without title
+    def test_job_bad_skill_creation(self):
+        response = self.client.post('/jobs', json={
+            "title": "Devops", 
+            "description": "Responsible for designing, implementing, and maintaining infrastructure automation.",
+            "company_name": "Tech Solutions Inc.",
+            "country": "Argentina",
+            "salary": 1000000000,  # Mi salario (?)
+            "posted_at": "2025-01-16",
+            "enabled": True,
+            "skills": [
+                { 
+                    "mensaje": "Que fiaca" 
+                }
+            ]})
+        
+        # BAD_REQUEST is expected
+        # I would expect it to fail since the skill model should be "id" or create a new one that with "name" and "level"
+        self.assertEqual(response.status_code, 400)
+
