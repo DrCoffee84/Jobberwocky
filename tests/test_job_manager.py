@@ -1,11 +1,11 @@
 from flask import Flask
 from flask_testing import TestCase
+from job_manager import app 
 
 class MyTest(TestCase):
     
     
     def create_app(self):
-        app = Flask(__name__)
         return app
 
     # Creo un job 

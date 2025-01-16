@@ -17,3 +17,8 @@ For local execution, run:
 ```bash 
 flask run
 ```
+
+For unit test:
+```bash
+python -m unittest discover tests
+```
