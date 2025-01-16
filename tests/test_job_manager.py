@@ -8,10 +8,32 @@ class MyTest(TestCase):
     def create_app(self):
         return app
 
-    # Creo un job 
+    # I create a normal job
     def test_job_creation(self):
         response = self.client.post('/jobs', json={
-            'title': 'Devops', 
+            "title": "Devops", 
+            "description": "Responsible for designing, implementing, and maintaining infrastructure automation.",
+            "company_name": "Tech Solutions Inc.",
+            "country": "Argentina",
+            "salary": 1_000_000_000,  # Mi salario (?)
+            "posted_at": "2025-01-16",
+            "enabled": True,
+            "skills": [
+                {
+                    "id": 101
+                },
+                { 
+                    "name": "Linux",
+                    "level": "High"
+                }
+            ]})
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('id', response.json)
+    
+    # I create a job without title
+    def test_job_bad_creation(self):
+        response = self.client.post('/jobs', json={
+            # title: "no esta :("
             "description": "Responsible for designing, implementing, and maintaining infrastructure automation.",
             "company_name": "Tech Solutions Inc.",
             "country": "Argentina",
@@ -27,5 +49,7 @@ class MyTest(TestCase):
                     "level": "High"
                 }
             ]})
-        self.assertEqual(response.status_code, 201)
-        self.assertIn('id', response.json)
+        
+        # BAD_REQUEST is expected
+        self.assertEqual(response.status_code, 400)
+    
