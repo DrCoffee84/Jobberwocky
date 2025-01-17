@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobberwocky
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jobberwocky
+  template:
+    metadata:
+      labels:
+        app: jobberwocky
+    spec:
+      containers:
+        - name: jobberwocky
+          image: avature/jobberwocky:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: FLASK_ENV
+              value: "production"
+            - name: FLASK_APP
+              value: "job_manager.py"
+          volumeMounts:
+            - name: db-storage
+              mountPath: /instance
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc

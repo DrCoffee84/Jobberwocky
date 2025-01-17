@@ -21,7 +21,7 @@ Once the services are ready, create a document `RELEASE.md` and describe a strat
 
 ## 4. Create additional sources
 
-In addition to our internal job service, we want our job-searching service to consume data from additional job opportunity sources using this service: [jobberwocky-extra-source](https://github.com/avatureta/jobberwocky-extra-source-v2). Find the best way to return a response that combines the results from more than one source.
+In addition to our internal job service, we want our job-searching service to consume data from additional job opportunity sources using this service: [jobberwocky-extra-source](https://github.com/avature/jobberwocky-extra-source-v2). Find the best way to return a response that combines the results from more than one source.
 
 
 ## FAQ
