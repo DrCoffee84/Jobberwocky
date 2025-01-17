@@ -21,7 +21,7 @@ class JobManagerTest(TestCase):
 
  
     job_valid_examples = [
-        {"title":"Devops","description":"Responsible for designing, implementing, and maintaining infrastructure automation.","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1000000000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Linux","level":"High"}]},
+        {"title":"Devops","description":"Responsible for designing, implementing, and maintaining infrastructure automation. ESENCIA","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1000000000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Linux","level":"High"}]},
         {"title":"Python Developer","description":"Develop and maintain Python applications.","company_name":"The Coffee Machine","country":"Brazil","salary":1000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Python","level":"Medium"}]},
         {"title":"Java Developer","description":"Spring Boot developer.","company_name":"Tech Solutions Inc.","country":"Argentina","salary":3000,"posted_at":"2025-02-20","enabled":False,"skills":[{"name":"Java","level":"High"}]},
         {"title":"Web Developer","description":"Develop websites and web applications.","company_name":"Web World","country":"USA","salary":2500,"posted_at":"2025-03-01","enabled":True,"skills":[{"name":"HTML","level":"High"},{"name":"CSS","level":"Medium"}]},
@@ -194,4 +194,21 @@ class JobManagerTest(TestCase):
             print(f"Failed test: {response.json}")
             raise
 
-    # Get 
+    # Search 
+    def test_job_search(self):
+        for job in  self.job_valid_examples:
+            response = self.client.post('/jobs', json=job)
+            try:
+                self.assertEqual(response.status_code, 201)
+            except AssertionError:
+                print(f"Failed test: {response.json}")
+                raise
+        # One of the descriptions has the word "ESENCIA" to facilitate unit testing.
+        response = self.client.get('/jobs',query_string={'search': 'ESENCIA'})
+        
+        try:
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json['pagination']['total'], 1)
+        except AssertionError:
+            print(f"Failed test: {response.json}")
+            raise

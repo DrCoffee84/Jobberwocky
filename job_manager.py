@@ -73,9 +73,20 @@ def get_jobs():
     # Pagination parameters: page (current page) and per_page (items per page)
     page = request.args.get('page', 1, type=int)  # Default page is 1
     per_page = request.args.get('per_page', 10, type=int)  # Default is 10 items per page
+    
+    # Search pattern for the job description
+    search = request.args.get('search', '', type=str)  # Default is an empty string (no filtering)
+    
+    # Base query for jobs
+    query = Job.query
+
+    # Apply the search filter if provided
+    if search:
+        query = query.filter(Job.description.ilike(f"%{search}%"))  # Case-insensitive search
+        
 
     # Fetch jobs with pagination
-    jobs_query = Job.query.paginate(page=page, per_page=per_page, error_out=False)
+    jobs_query = query.paginate(page=page, per_page=per_page, error_out=False)
     
     # Get all job IDs to perform a single query for JobSkill and Skill
     job_ids = [job.id for job in jobs_query.items]
