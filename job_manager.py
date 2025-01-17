@@ -1,5 +1,9 @@
 from flask import Flask, request, jsonify
 from models import db, Job, Skill, JobSkill
+import requests
+from datetime import datetime
+from math import ceil
+from lxml import etree
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jobs.db'
@@ -82,6 +86,7 @@ def get_jobs():
     company_name = request.args.get('company_name', '', type=str)  # Filter by company name
     country = request.args.get('country', '', type=str)  # Filter by country
     skills = request.args.getlist('skills')  # Filter by skills (list of skills)
+    external_source = request.args.get('external_source') # Get jobs from external source 
 
     # Base query for jobs
     query = Job.query
@@ -101,8 +106,7 @@ def get_jobs():
         query = query.filter(Job.country.ilike(f"%{country}%"))  # Search by country name
     if skills:
         query = query.join(JobSkill).join(Skill).filter(Skill.name.in_(skills)).distinct()  # Filter by skills
-
-
+       
     # Fetch jobs with pagination
     jobs_query = query.paginate(page=page, per_page=per_page, error_out=False)
     
@@ -126,22 +130,102 @@ def get_jobs():
         job_data['skills'] = job_skills_map.get(job.id, [])  # Get skills for the current job
         jobs.append(job_data)
 
-    # Pagination data
-    pagination_data = {
-        'total': jobs_query.total,  # Total number of jobs
-        'pages': jobs_query.pages,  # Total number of pages
-        'current_page': jobs_query.page,  # Current page number
-        'next_page': jobs_query.next_num,  # Next page number (None if on last page)
-        'prev_page': jobs_query.prev_num,  # Previous page number (None if on first page)
-    }
+    external_jobs_dicts = []
+    if external_source != 'false': 
+        external_jobs = fetch_jobs_from_external_service(search,salary_min,salary_max,country)
+        external_jobs_dicts = [job.to_dict() for job in external_jobs]
     
+    # To Dict
+    db_jobs = [job.to_dict() for job in jobs_query.items]
+    
+    # Combine both lists of jobs
+    all_jobs = db_jobs + external_jobs_dicts
+    
+    # Manually paginate the combined list
+    total_jobs = len(external_jobs_dicts) + jobs_query.total  # Total number of jobs
+    total_pages = ceil(total_jobs / per_page)  # Total number of pages
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+    paginated_jobs = all_jobs[start_index:end_index]
+   
+    # Prepare the pagination data
+    pagination_data = {
+        'total': total_jobs,  # Total number of jobs
+        'pages': total_pages,  # Total number of pages
+        'current_page': page,  # Current page number
+        'next_page': page + 1 if page < total_pages else None,  # Next page number (None if on last page)
+        'prev_page': page - 1 if page > 1 else None,  # Previous page number (None if on first page)
+    }
+
     # Return jobs and pagination data
     return jsonify({
-        'jobs': jobs,  # List of jobs
+        'jobs': paginated_jobs,  # List of jobs
         'pagination': pagination_data  # Pagination info
     })
 
 
+def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None, country=None):
+    # Build params
+    params = {}
+    if name:
+        params['name'] = name
+    if salary_min:
+        params['salary_min'] = salary_min
+    if salary_max:
+        params['salary_max'] = salary_max
+    if country:
+        params['country'] = country
+    
+    # Call extra source service 
+    try:
+        response = requests.get('http://localhost:8081/jobs', params=params)
+        response.raise_for_status()  
+        
+        # Get json
+        jobs_data = response.json()
+        
+        # Convertir la respuesta en un formato más conveniente
+        formatted_jobs = []
+        for country, jobs in jobs_data.items():
+            for job in jobs:
+                job_instance = Job(
+                    title=job[0],
+                    description="This job is from jobberwocky-extra-source-v2", 
+                    company_name="Unknow Company",
+                    country=country,
+                    salary=job[1],
+                    posted_at=datetime.now().strftime('%Y-%m-%d'),
+                    enabled=True,
+                    external="jobberwocky-extra-source-v2"
+                )
+                skills=xmlToSkill(job[2])
+                job_data = job_instance.to_dict()
+                job_data['skills'] = []
+
+                for skill in skills:
+                    job_data['skills'].append(skill.to_dict())
+
+                formatted_jobs.append(job_instance)          
+        
+        return formatted_jobs
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching jobs data: {e}")
+        return None
+
+def xmlToSkill(skills_xml: str, level: str = 'Intermediate'):
+    #Parse XML
+    root = etree.fromstring(skills_xml)
+    
+    # Create skill list
+    skills = []
+    for skill_element in root.findall('skill'):
+        skill_name = skill_element.text.strip()
+        if skill_name:  
+            skill = Skill(name=skill_name, level=level) 
+            skills.append(skill)
+    
+    return skills 
 
 
 if __name__ == '__main__':

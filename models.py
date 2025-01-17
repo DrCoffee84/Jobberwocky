@@ -13,7 +13,8 @@ class Job(db.Model):
     salary = db.Column(db.Integer, nullable=False)
     posted_at = db.Column(db.String(10), nullable=False)
     enabled = db.Column(db.Boolean, nullable=False)
-
+    external = db.Column(db.String(50),nullable=True)
+    
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 

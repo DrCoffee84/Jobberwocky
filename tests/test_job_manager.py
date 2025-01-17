@@ -37,7 +37,7 @@ class JobManagerTest(TestCase):
     #######################################
     ## 1. Create a job posting service   ##
     #######################################
-   
+ 
     # Create a normal job
     def test_job_creation(self):
         job_data = self.job_valid_examples[0]
@@ -49,7 +49,7 @@ class JobManagerTest(TestCase):
         except AssertionError:
             print(f"Failed test: {response.json}")
             raise
-        
+   
     # Create all jobs
     def test_create_all_job(self):
         for job_data in self.job_valid_examples:
@@ -120,21 +120,21 @@ class JobManagerTest(TestCase):
     #######################################
     ## 2. Create a job-searching service ##
     #######################################
-    
+  
     # Get 0 jobs
     def test_get_jobs(self):
-        response = self.client.get('/jobs')
+        response = self.client.get('/jobs?external_source=false')
         try: 
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['pagination']['total'], 0)
         except AssertionError:
             print(f"Failed test: {response.json}")
             raise
-
+    
     # Create a normal job and get
     def test_job_get(self):
         self.client.post('/jobs', json=random.choice(self.job_valid_examples))
-        response = self.client.get('/jobs')
+        response = self.client.get('/jobs?external_source=false')
         try:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['pagination']['total'], 1)
@@ -152,7 +152,7 @@ class JobManagerTest(TestCase):
             except AssertionError:
                 print(f"Failed test: {response.json}")
                 raise
-        response = self.client.get('/jobs')
+        response = self.client.get('/jobs?external_source=false')
         try:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['pagination']['total'], 3)
@@ -169,7 +169,7 @@ class JobManagerTest(TestCase):
             except AssertionError:
                 print(f"Failed test: {response.json}")
                 raise
-        response = self.client.get('/jobs')
+        response = self.client.get('/jobs?external_source=false')
         try:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['pagination']['total'], 11)
@@ -186,7 +186,7 @@ class JobManagerTest(TestCase):
             except AssertionError:
                 print(f"Failed test: {response.json}")
                 raise
-        response = self.client.get('/jobs',query_string={'page': 2})
+        response = self.client.get('/jobs',query_string={'external_source':'false','page': 2})
         try:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['pagination']['total'], 11)
@@ -204,7 +204,7 @@ class JobManagerTest(TestCase):
                 print(f"Failed test: {response.json}")
                 raise
         # One of the descriptions has the word "ESENCIA" to facilitate unit testing.
-        response = self.client.get('/jobs',query_string={'search': 'ESENCIA'})
+        response = self.client.get('/jobs',query_string={'external_source':'false', 'search': 'ESENCIA'})
         
         try:
             self.assertEqual(response.status_code, 200)
@@ -248,7 +248,8 @@ class JobManagerTest(TestCase):
         
         # Run each test
         for test in test_cases:
-            response = self.client.get('/jobs', query_string=test['filter'])
+            query = {**test['filter'], 'external_source': 'false'}
+            response = self.client.get('/jobs', query_string=query)
             try:
                 self.assertEqual(response.status_code, 200, f"Failed {test['description']}: Status code mismatch.")
                 self.assertEqual(response.json['pagination']['total'], test['expected_total'], f"Failed {test['description']}: Total mismatch.")
@@ -266,10 +267,26 @@ class JobManagerTest(TestCase):
             'country': 'Germany',
             'skills': ['AWS', 'Terraform']
         }
+        query = query = {**combined_filters, 'external_source': 'false'}
         response = self.client.get('/jobs', query_string=combined_filters)
         try:
             self.assertEqual(response.status_code, 200, "Failed combined filters: Status code mismatch.")
             self.assertEqual(response.json['pagination']['total'], 1, "Failed combined filters: Total mismatch.")
         except AssertionError:
             print(f"Failed combined filters\nResponse: {response.json}")
+            raise
+
+
+    #######################################
+    ## 4. Create additional sources      ##
+    #######################################
+    
+    # Get 42 extra soruce jobs
+    def test_get_jobs(self):
+        response = self.client.get('/jobs')
+        try: 
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json['pagination']['total'], 42)
+        except AssertionError:
+            print(f"Failed test: {response.json}")
             raise
