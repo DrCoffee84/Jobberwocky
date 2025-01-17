@@ -128,3 +128,30 @@ class JobManagerTest(TestCase):
         self.assertEqual(response.status_code, 200)
         # Verificar que el JSON esté vacío
         self.assertEqual(response.json['pagination']['total'], 0)
+
+
+    # Create a normal job and get
+    def test_job_get(self):
+        # Create a one job
+        self.client.post('/jobs', json={
+            "title": "Devops", 
+            "description": "Responsible for designing, implementing, and maintaining infrastructure automation.",
+            "company_name": "Tech Solutions Inc.",
+            "country": "Argentina",
+            "salary": 1_000_000_000,  # Mi salario (?)
+            "posted_at": "2025-01-16",
+            "enabled": True,
+            "skills": [
+                { 
+                    "name": "Linux",
+                    "level": "High"
+                }
+            ]})
+
+        response = self.client.get('/jobs')
+        # There is nothing in the database.
+        self.assertEqual(response.status_code, 200)
+        # Verificar que el JSON esté vacío
+        self.assertEqual(response.json['pagination']['total'], 1)
+
+        print(response.json)
