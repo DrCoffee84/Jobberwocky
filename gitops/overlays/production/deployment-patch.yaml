@@ -1,0 +1,6 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobberwocky
+spec:
+  replicas: 5  # for explame 
