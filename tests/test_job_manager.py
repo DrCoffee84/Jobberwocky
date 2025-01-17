@@ -2,8 +2,7 @@ from flask import Flask
 from flask_testing import TestCase
 from job_manager import app, db
 
-class MyTest(TestCase):
-    
+class JobManagerTest(TestCase):
     
     def create_app(self):
         app.config['TESTING'] = True
@@ -17,6 +16,8 @@ class MyTest(TestCase):
     def tearDown(self): 
         db.session.remove()
         db.drop_all()
+
+    ### 1. Create a job posting service 
 
     # Create a normal job
     def test_job_creation(self):
@@ -119,3 +120,11 @@ class MyTest(TestCase):
         self.assertEqual(response2.status_code, 201)
 
     
+    ### 2. Create a job-searching service
+
+    def test_get_jobs(self):
+        response = self.client.get('/jobs')
+        # There is nothing in the database.
+        self.assertEqual(response.status_code, 200)
+        # Verificar que el JSON esté vacío
+        self.assertEqual(response.json(), [])
