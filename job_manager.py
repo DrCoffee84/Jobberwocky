@@ -63,5 +63,38 @@ def create_job():
         db.session.rollback()  # Rollback en caso de error
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/jobs', methods=['GET'])
+def get_jobs():
+    # Pagination parameters: page (current page) and per_page (items per page)
+    page = request.args.get('page', 1, type=int)  # Default page is 1
+    per_page = request.args.get('per_page', 10, type=int)  # Default is 10 items per page
+
+    # Fetch jobs with pagination
+    jobs_query = Job.query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Prepare the response data
+    jobs = [job.to_dict() for job in jobs_query.items]
+    for job in jobs:
+        job['skills'] = [skill.to_dict() for skill in job.skills]
+    
+    # Pagination data
+    pagination_data = {
+        'total': jobs_query.total,  # Total number of jobs
+        'pages': jobs_query.pages,  # Total number of pages
+        'current_page': jobs_query.page,  # Current page number
+        'next_page': jobs_query.next_num,  # Next page number (None if on last page)
+        'prev_page': jobs_query.prev_num,  # Previous page number (None if on first page)
+    }
+    
+    # Return jobs and pagination data
+    return jsonify({
+        'jobs': jobs,  # List of jobs
+        'pagination': pagination_data  # Pagination info
+    })
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)

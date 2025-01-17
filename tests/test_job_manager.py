@@ -127,4 +127,4 @@ class JobManagerTest(TestCase):
         # There is nothing in the database.
         self.assertEqual(response.status_code, 200)
         # Verificar que el JSON esté vacío
-        self.assertEqual(response.json(), [])
+        self.assertEqual(response.json['pagination']['total'], 0)
