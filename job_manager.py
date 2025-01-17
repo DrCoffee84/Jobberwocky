@@ -76,14 +76,32 @@ def get_jobs():
     
     # Search pattern for the job description
     search = request.args.get('search', '', type=str)  # Default is an empty string (no filtering)
-    
+    date_filter = request.args.get('posted_after', None, type=str)  # Filter by date (YYYY-MM-DD)
+    salary_min = request.args.get('salary_min', None, type=int)  # Minimum salary
+    salary_max = request.args.get('salary_max', None, type=int)  # Maximum salary
+    company_name = request.args.get('company_name', '', type=str)  # Filter by company name
+    country = request.args.get('country', '', type=str)  # Filter by country
+    skills = request.args.getlist('skills')  # Filter by skills (list of skills)
+
     # Base query for jobs
     query = Job.query
 
     # Apply the search filter if provided
     if search:
-        query = query.filter(Job.description.ilike(f"%{search}%"))  # Case-insensitive search
-        
+        query = query.filter((Job.description.ilike(f"%{search}%")) | (Job.title.ilike(f"%{search}%")))
+    if date_filter:
+        query = query.filter(Job.posted_at >= date_filter)  # Jobs posted after a specific date
+    if salary_min is not None:
+        query = query.filter(Job.salary >= salary_min)  # Jobs with salary >= salary_min
+    if salary_max is not None:
+        query = query.filter(Job.salary <= salary_max)  # Jobs with salary <= salary_max
+    if company_name:
+        query = query.filter(Job.company_name.ilike(f"%{company_name}%"))  # Search by company name
+    if country:
+        query = query.filter(Job.country.ilike(f"%{country}%"))  # Search by country name
+    if skills:
+        query = query.join(JobSkill).join(Skill).filter(Skill.name.in_(skills)).distinct()  # Filter by skills
+
 
     # Fetch jobs with pagination
     jobs_query = query.paginate(page=page, per_page=per_page, error_out=False)
