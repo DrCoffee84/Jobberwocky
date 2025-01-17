@@ -16,8 +16,11 @@ def create_job():
     
     # Required fields
     required_fields = ['title', 'description', 'company_name', 'country', 'salary', 'posted_at', 'enabled', 'skills']
-    if not all(field in job_data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400 # bad request
+    missing_fields = [field for field in required_fields if field not in job_data]
+
+    if missing_fields:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400  # bad request
+
 
     new_job = Job(
         title=job_data['title'],
@@ -28,6 +31,7 @@ def create_job():
         posted_at=job_data['posted_at'],
         enabled=job_data['enabled']
     )
+
     db.session.add(new_job)
     db.session.flush() # Force to get ID
 
@@ -73,11 +77,26 @@ def get_jobs():
     # Fetch jobs with pagination
     jobs_query = Job.query.paginate(page=page, per_page=per_page, error_out=False)
     
-    # Prepare the response data
-    jobs = [job.to_dict() for job in jobs_query.items]
-    for job in jobs:
-        job['skills'] = [skill.to_dict() for skill in job.skills]
+    # Get all job IDs to perform a single query for JobSkill and Skill
+    job_ids = [job.id for job in jobs_query.items]
+
+    # Fetch all the skills related to the jobs in a single query
+    skills_query = db.session.query(Skill, JobSkill.job_id).join(JobSkill).filter(JobSkill.job_id.in_(job_ids)).all()
     
+    # Map job_id -> list of skills
+    job_skills_map = {}
+    for skill, job_id in skills_query:
+        if job_id not in job_skills_map:
+            job_skills_map[job_id] = []
+        job_skills_map[job_id].append(skill.to_dict())
+    
+    # Prepare the response data
+    jobs = []
+    for job in jobs_query.items:
+        job_data = job.to_dict()  # Convert job to dictionary
+        job_data['skills'] = job_skills_map.get(job.id, [])  # Get skills for the current job
+        jobs.append(job_data)
+
     # Pagination data
     pagination_data = {
         'total': jobs_query.total,  # Total number of jobs
