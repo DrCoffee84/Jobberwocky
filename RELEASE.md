@@ -22,3 +22,15 @@ For unit test:
 ```bash
 python -m unittest discover tests
 ```
+
+# Docker
+
+Build
+```bash
+docker build -t jobberwocky .
+```
+
+Run
+```bash
+docker run --name jobberwocky-container -p 8080:3000 jobberwocky
+```
