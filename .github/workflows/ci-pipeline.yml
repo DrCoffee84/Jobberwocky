@@ -2,8 +2,8 @@ name: Deploy to Kubernetes
 
 on:
   push:
-    branches:
-      - main 
+    tags:
+      - 'main*'  # tag pushed to main
 
 jobs:
   deploy:
@@ -30,9 +30,13 @@ jobs:
         pytest --maxfail=1 --disable-warnings -q
 
     # Stage 3: Build Image - Build Docker image
+    - name: Set IMAGE_TAG from the pushed tag
+      run: |
+        echo "IMAGE_TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV  # Extract the tag name from the reference and set it as IMAGE_TAG in environment
+    
     - name: Build Docker image
       run: |
-        docker build -t avature/jobberwocky:latest .
+        docker build -t avature/jobberwocky:$IMAGE_TAG .
 
     - name: Log in to Docker Hub
       uses: docker/login-action@v2

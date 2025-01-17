@@ -1,0 +1,34 @@
+name: CD Pipeline
+
+on:
+  workflow_dispatch:  # Manually triggered
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the code repository
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Step 2: Get Docker image from container registry 
+    - name: Get Image
+      run: |
+        docker pull avature/jobberwocky:$IMAGE_TAG   
+
+    # Step 3: Set up kubectl to interact with your Kubernetes cluster
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v1
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }}  # Make sure you have your kubeconfig in GitHub secrets
+
+    # Step 4: Deploy to Kubernetes
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -k overlays/production/  # Adjust path to the overlay if needed
+
+    # Step 5: Post Deploy Test
+    - name: Post Deploy Test
+      run: |
+        curl -X GET "http://$URL_PROD:8080"  
