@@ -5,6 +5,7 @@ from datetime import datetime
 from math import ceil
 from lxml import etree
 from sqlalchemy.orm import joinedload
+import os
 
 
 app = Flask(__name__)
@@ -14,6 +15,9 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+
+url_external_source = os.getenv('URL_EXTERNAL_SOURCE', 'localhost:8081')
 
 
 @app.route('/jobs', methods=['POST'])
@@ -175,7 +179,8 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
 
     # Call extra source service 
     try:
-        response = requests.get('http://localhost:8081/jobs', params=params)
+        
+        response = requests.get(f"http://{url_external_source}/jobs", params=params)
         response.raise_for_status()  
         
         # Get json

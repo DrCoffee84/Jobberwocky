@@ -21,7 +21,7 @@ jobs:
     - name: Set up kubectl
       uses: azure/setup-kubectl@v1
       with:
-        kubeconfig: ${{ secrets.KUBECONFIG }}  # Make sure you have your kubeconfig in GitHub secrets
+        kubeconfig: ${{ secrets.KUBECONFIG }} 
 
     # Step 4: Deploy to Kubernetes
     - name: Deploy to Kubernetes
@@ -29,6 +29,7 @@ jobs:
         kubectl apply -k overlays/production/  # Adjust path to the overlay if needed
 
     # Step 5: Post Deploy Test
-    - name: Post Deploy Test
+    # This will just be an example, it could be something more complex.
+    - name: Post deploy tests with Flask-Testing
       run: |
-        curl -X GET "http://$URL_PROD:8080"  
+        python -m unittest qa/test.sh 

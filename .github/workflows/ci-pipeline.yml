@@ -59,11 +59,7 @@ jobs:
         kubectl apply -k ./gitops/overlays/dev
 
     # Stage 5: Post deploy Test - Run tests after deployment
+    # This will just be an example, it could be something more complex.
     - name: Post deploy tests with Flask-Testing
       run: |
-        python -m unittest qa/post_deploy_test.py  
-
-    # Si prefieres usar Postman CLI para post deploy testing, puedes usar:
-    # - name: Run Postman tests with Newman
-    #   run: |
-    #     newman run your_postman_collection.json
+        python -m unittest qa/test.sh 
