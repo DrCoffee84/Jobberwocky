@@ -4,6 +4,8 @@ import requests
 from datetime import datetime
 from math import ceil
 from lxml import etree
+from sqlalchemy.orm import joinedload
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jobs.db'
@@ -85,11 +87,12 @@ def get_jobs():
     salary_max = request.args.get('salary_max', None, type=int)  # Maximum salary
     company_name = request.args.get('company_name', '', type=str)  # Filter by company name
     country = request.args.get('country', '', type=str)  # Filter by country
-    skills = request.args.getlist('skills')  # Filter by skills (list of skills)
+    skills_filter = request.args.getlist('skills')  # Filter by skills (list of skills)
     external_source = request.args.get('external_source') # Get jobs from external source 
 
     # Base query for jobs
-    query = Job.query
+    query = Job.query.options(joinedload(Job.job_skills).joinedload(JobSkill.skill))
+
 
     # Apply the search filter if provided
     if search:
@@ -104,45 +107,27 @@ def get_jobs():
         query = query.filter(Job.company_name.ilike(f"%{company_name}%"))  # Search by company name
     if country:
         query = query.filter(Job.country.ilike(f"%{country}%"))  # Search by country name
-    if skills:
-        query = query.join(JobSkill).join(Skill).filter(Skill.name.in_(skills)).distinct()  # Filter by skills
-       
+    if skills_filter:
+        query = query.join(JobSkill).join(Skill).filter(Skill.name.in_(skills_filter)).distinct()  # Filter by skills
+    else:
+        query = query.join(JobSkill).join(Skill).distinct()
+    
     # Fetch jobs with pagination
     jobs_query = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    # Get all job IDs to perform a single query for JobSkill and Skill
-    job_ids = [job.id for job in jobs_query.items]
-
-    # Fetch all the skills related to the jobs in a single query
-    skills_query = db.session.query(Skill, JobSkill.job_id).join(JobSkill).filter(JobSkill.job_id.in_(job_ids)).all()
-    
-    # Map job_id -> list of skills
-    job_skills_map = {}
-    for skill, job_id in skills_query:
-        if job_id not in job_skills_map:
-            job_skills_map[job_id] = []
-        job_skills_map[job_id].append(skill.to_dict())
-    
-    # Prepare the response data
-    jobs = []
-    for job in jobs_query.items:
-        job_data = job.to_dict()  # Convert job to dictionary
-        job_data['skills'] = job_skills_map.get(job.id, [])  # Get skills for the current job
-        jobs.append(job_data)
-
-    external_jobs_dicts = []
-    if external_source != 'false': 
-        external_jobs = fetch_jobs_from_external_service(search,salary_min,salary_max,country)
-        external_jobs_dicts = [job.to_dict() for job in external_jobs]
-    
     # To Dict
     db_jobs = [job.to_dict() for job in jobs_query.items]
     
+    # Get external Jobs
+    external_jobs = []  # A redis could be used
+    if external_source != 'false':
+        external_jobs = fetch_jobs_from_external_service(search,salary_min,salary_max,country,date_filter,company_name,skills_filter)
+
+        
     # Combine both lists of jobs
-    all_jobs = db_jobs + external_jobs_dicts
+    all_jobs = db_jobs + external_jobs
     
     # Manually paginate the combined list
-    total_jobs = len(external_jobs_dicts) + jobs_query.total  # Total number of jobs
+    total_jobs = len(external_jobs) + jobs_query.total  # Total number of jobs
     total_pages = ceil(total_jobs / per_page)  # Total number of pages
     start_index = (page - 1) * per_page
     end_index = start_index + per_page
@@ -164,7 +149,7 @@ def get_jobs():
     })
 
 
-def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None, country=None):
+def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None, country=None,date_filter=None,company_name=None,skills_filter=None):
     # Build params
     params = {}
     if name:
@@ -175,7 +160,19 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
         params['salary_max'] = salary_max
     if country:
         params['country'] = country
+    if  company_name != '':
+        if company_name != "Unknow Company":
+            return []       
     
+    today = datetime.now().strftime('%Y-%m-%d')
+    if date_filter:
+        # Convertir ambas fechas a objetos datetime para comparar
+        today_date = datetime.strptime(today, '%Y-%m-%d')
+        date_filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+        if today_date >= date_filter_date: 
+            print("Warning: Assuming the job post date from external sources is today.")
+            return []
+
     # Call extra source service 
     try:
         response = requests.get('http://localhost:8081/jobs', params=params)
@@ -194,7 +191,7 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
                     company_name="Unknow Company",
                     country=country,
                     salary=job[1],
-                    posted_at=datetime.now().strftime('%Y-%m-%d'),
+                    posted_at=today,
                     enabled=True,
                     external="jobberwocky-extra-source-v2"
                 )
@@ -204,14 +201,28 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
 
                 for skill in skills:
                     job_data['skills'].append(skill.to_dict())
+                    
+                
+                '''
+                In case the answer always includes a large number of jobs and filtering by skills is not possible, 
+                it could be more efficient to store the jobs in Redis and use it to query by skills.
+                Update the redis every time to be defined, in case there are new jobs and others that were cancelled.
+                redis.sinter('jobs:skills', *skills_filter) 
+                '''
+                # Check if any skill is in the skill filter
+                if skills_filter:
+                    # Check if any skills in the list are in skills_filter when skills filter isn't None
+                    if [skill.name for skill in skills if skill.name in skills_filter]:
+                        formatted_jobs.append(job_data)
+                else:
+                    formatted_jobs.append(job_data)          
 
-                formatted_jobs.append(job_instance)          
-        
+        # Return a dictionary
         return formatted_jobs
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching jobs data: {e}")
-        return None
+        print("Warning: Failed to connect to external source.")
+        return []
 
 def xmlToSkill(skills_xml: str, level: str = 'Intermediate'):
     #Parse XML
