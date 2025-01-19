@@ -22,6 +22,8 @@ spec:
               value: "production"
             - name: FLASK_APP
               value: "job_manager.py"
+            - name: URL_EXTERNAL_SOURCE
+              value: "avatureexternaljobs:8080"
           volumeMounts:
             - name: db-storage
               mountPath: /instance

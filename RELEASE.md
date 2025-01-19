@@ -13,6 +13,7 @@ set FLASK_APP=job_manager.py
 $env:FLASK_APP = "job_manager.py"
 ```
 
+
 For local execution, run:
 ```bash 
 flask run
@@ -23,6 +24,14 @@ For unit test:
 python -m unittest discover tests
 ```
 
+If you want to put an external service to get more jobs you must perform the build and run
+```bash
+git clone https://github.com/avatureta/jobberwocky-extra-source-v2.git
+cd jobberwocky-extra-source-v2
+docker build . -t avatureexternaljobs
+docker run -p 8081:8080 avatureexternaljobs
+```
+
 # Docker
 
 Build
@@ -30,14 +39,29 @@ Build
 docker build -t jobberwocky .
 ```
 
-Run
+Run local
 ```bash
-docker run --name jobberwocky-container -p 8080:3000 jobberwocky
+docker run --name jobberwocky-container --rm -p 8080:3000 jobberwocky
+```
+
+Run local with external soruce
+```bash
+docker network create job_network
+docker run --name avatureexternaljobs --rm --network job_network -p 8081:8080 avatureexternaljobs
+docker run --name jobberwocky-container --rm  --network job_network -p 8080:3000 jobberwocky
 ```
 
 Run from registry 
 ```bash
-docker run --name jobberwocky-container -p 8080:3000 avature/jobberwocky:latest
+docker run --name jobberwocky-container --rm -p 8080:3000 avature/jobberwocky:latest
+```
+
+# To test 
+```bash
+ curl -X POST http://localhost:8080/jobs -H "Content-Type: application/json" -d '{"title":"Devops","description":"Responsible for designing, implementing, and maintaining infrastructure automation. ESENCIA","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1000000000,"posted_at":"2025-01-16","enabled":true,"skills":[{"name":"Linux","level":"High"}]}'
+```
+```bash
+ curl -X POST http://localhost:8080/jobs -H "Content-Type: application/json" -d '{"title":"QA Engineer","description":"Test and ensure the quality of software.","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1500,"posted_at":"2025-05-15","enabled":true,"skills":[{"id":1,"level":"High"},{"name":"Automation Testing","level":"Medium"}]}'
 ```
 
 # Dev 
