@@ -1,13 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,render_template
 from models import db, Job, Skill, JobSkill
-import requests
-from datetime import datetime
 from math import ceil
-from lxml import etree
 from sqlalchemy.orm import joinedload
-import os
-import logging
+from services import fetch_jobs_from_external_service
+from utils import validate_job_data
 
+import logging
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jobs.db'
@@ -19,20 +17,19 @@ with app.app_context():
 
 logging.basicConfig(level=logging.INFO)
 
-url_external_source = os.getenv('URL_EXTERNAL_SOURCE', 'localhost:8081')
 
+@app.route('/')
+def Frontend():
+    return render_template('index.html')
 
 @app.route('/jobs', methods=['POST'])
 def create_job():
     job_data = request.json
+    validation_result = validate_job_data(job_data)
+
+    if validation_result:
+        return validation_result
     
-    # Required fields
-    required_fields = ['title', 'description', 'company_name', 'country', 'salary', 'posted_at', 'enabled', 'skills']
-    missing_fields = [field for field in required_fields if field not in job_data]
-
-    if missing_fields:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400  # bad request
-
 
     new_job = Job(
         title=job_data['title'],
@@ -155,99 +152,6 @@ def get_jobs():
     })
 
 
-def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None, country=None,date_filter=None,company_name=None,skills_filter=None):
-    # Build params
-    params = {}
-    if name:
-        params['name'] = name
-    if salary_min:
-        params['salary_min'] = salary_min
-    if salary_max:
-        params['salary_max'] = salary_max
-    if country:
-        params['country'] = country
-    if  company_name != '':
-        if company_name != "Unknow Company":
-            return []       
-    
-    today = datetime.now().strftime('%Y-%m-%d')
-    if date_filter:
-        # Convertir ambas fechas a objetos datetime para comparar
-        today_date = datetime.strptime(today, '%Y-%m-%d') 
-        date_filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
-        if date_filter_date >= today_date: 
-            logging.debug("Warning: Assuming the job post date from external sources is today.")
-            return []
-
-    # Call extra source service 
-    try:
-        
-        response = requests.get(f"http://{url_external_source}/jobs", params=params)
-        response.raise_for_status()  
-        
-        # Get json
-        jobs_data = response.json()
-        
-        # Convertir la respuesta en un formato más conveniente
-        formatted_jobs = []
-        for country, jobs in jobs_data.items():
-            for job in jobs:
-                job_instance = Job(
-                    title=job[0],
-                    description="This job is from jobberwocky-extra-source-v2", 
-                    company_name="Unknow Company",
-                    country=country,
-                    salary=job[1],
-                    posted_at=today,
-                    enabled=True,
-                    external="jobberwocky-extra-source-v2"
-                )
-                skills=xmlToSkill(job[2])
-                job_data = job_instance.to_dict()
-                job_data['skills'] = []
-
-                for skill in skills:
-                    job_data['skills'].append(skill.to_dict())
-                    
-                
-                '''
-                In case the answer always includes a large number of jobs and filtering by skills is not possible, 
-                it could be more efficient to store the jobs in Redis and use it to query by skills.
-                Update the redis every time to be defined, in case there are new jobs and others that were cancelled.
-                redis.sinter('jobs:skills', *skills_filter) 
-                '''
-                # Check if any skill is in the skill filter
-                if skills_filter:
-                    # Check if any skills in the list are in skills_filter when skills filter isn't None
-                    if [skill.name for skill in skills if skill.name in skills_filter]:
-                        formatted_jobs.append(job_data)
-                else:
-                    formatted_jobs.append(job_data)          
-
-        # Return a dictionary
-        return formatted_jobs
-
-    except requests.exceptions.RequestException as e:
-        logging.warning("Warning: Failed to connect to external source.")
-        return []
-
-def xmlToSkill(skills_xml: str, level: str = 'Intermediate'):
-    #Parse XML
-    try:
-        root = etree.fromstring(skills_xml)
-    except etree.XMLSyntaxError as e:
-        logging.error(f"Error parsing XML: {e}")
-        return []
-    
-    # Create skill list
-    skills = []
-    for skill_element in root.findall('skill'):
-        skill_name = skill_element.text.strip()
-        if skill_name:  
-            skill = Skill(name=skill_name, level=level) 
-            skills.append(skill)
-    
-    return skills 
 
 
 if __name__ == '__main__':

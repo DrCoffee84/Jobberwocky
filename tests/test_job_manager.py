@@ -33,6 +33,25 @@ class JobManagerTest(TestCase):
         {"title":"Cloud Engineer","description":"Design and implement cloud solutions.","company_name":"Cloud World","country":"Germany","salary":6000,"posted_at":"2026-09-05","enabled":True,"skills":[{"name":"AWS","level":"High"},{"name":"Terraform","level":"Medium"}]},
         {"title":"Cybersecurity Analyst","description":"Protect systems and data from cyber threats.","company_name":"SecureTech","country":"Australia","salary":4000,"posted_at":"2025-10-01","enabled":False,"skills":[{"name":"Network Security","level":"High"},{"name":"Penetration Testing","level":"Medium"}]}
     ]
+    
+    job_invalid_examples = [
+        # Missing required field 'title'
+        {"description":"Responsible for infrastructure", "company_name":"Tech Solutions Inc.","country":"Argentina","salary":1000000000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Linux","level":"High"}]},
+        # Title too long
+        {"title":"ThisIsAVeryLongTitleThatExceedsTheMaximumAllowedLengthOf100CharactersOseaDigamosLaInteligenciaArtificailNoSabeContarxD","description":"Designer", "company_name":"Design Co.","country":"USA","salary":2000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Adobe","level":"High"}]},
+        # Invalid salary (string instead of integer)
+        {"title":"Designer","description":"Design graphics","company_name":"Design Co.","country":"USA","salary":"2000","posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Adobe","level":"High"}]},
+        # Invalid date format for posted_at
+        {"title":"Designer","description":"Design graphics","company_name":"Design Co.","country":"USA","salary":2000,"posted_at":"2025-01-16T12:00:00","enabled":True,"skills":[{"name":"Adobe","level":"High"}]},
+        # 'enabled' not a boolean
+        {"title":"Designer","description":"Design graphics","company_name":"Design Co.","country":"USA","salary":2000,"posted_at":"2025-01-16","enabled":"True","skills":[{"name":"Adobe","level":"High"}]},
+        # Skills not a list
+        {"title":"Designer","description":"Design graphics","company_name":"Design Co.","country":"USA","salary":2000,"posted_at":"2025-01-16","enabled":True,"skills":"Adobe"},
+        # Empty description
+        {"title":"Designer","description":"","company_name":"Design Co.","country":"USA","salary":2000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Adobe","level":"High"}]},
+        # Country too long
+        {"title":"Designer","description":"Design graphics","company_name":"Design Co.","country":"ThisIsAVeryLongCountryNameWhichShouldNotBeAccepted1","salary":2000,"posted_at":"2025-01-16","enabled":True,"skills":[{"name":"Adobe","level":"High"}]}
+    ]
 
     #######################################
     ## 1. Create a job posting service   ##
@@ -44,21 +63,17 @@ class JobManagerTest(TestCase):
         response = self.client.post('/jobs', json=job_data)
         self.assertEqual(response.status_code, 201,f"Failed test_job_creation: {response.json}")
 
-    
-    # Create all jobs
-    def test_create_all_job(self):
+    # Create all valid jobs
+    def test_valid_job_creation(self):
         for job_data in self.job_valid_examples:
-            job_data = random.choice(self.job_valid_examples).copy()
             response = self.client.post('/jobs', json=job_data)
-            self.assertEqual(response.status_code, 201,f"Failed test_create_all_job: {response.json}")
-           
+            self.assertEqual(response.status_code, 201,f"Failed test_valid_job_creation: {response.json}")
     
-    # I create a job without title
-    def test_job_bad_creation(self):
-        job_data = random.choice(self.job_valid_examples).copy()
-        job_data.pop("title", None)  # Remove title to simulate a bad request
-        response = self.client.post('/jobs', json=job_data)
-        self.assertEqual(response.status_code, 400,f"Failed test_job_bad_creation: {response.json}")
+    # Try to create all invalid jobs  
+    def test_invalid_job_creation(self):
+        for job_data in self.job_invalid_examples:
+            response = self.client.post('/jobs', json=job_data)
+            self.assertEqual(response.status_code, 400, f"Failed test_invalid_job_creation for data: {job_data}. Response: {response.json}")
     
     # I create a job with a bad skill
     def test_job_bad_skill_creation(self):

@@ -61,7 +61,7 @@ docker run --name jobberwocky-container --rm -p 8080:3000 avature/jobberwocky:la
  curl -X POST http://localhost:8080/jobs -H "Content-Type: application/json" -d '{"title":"Devops","description":"Responsible for designing, implementing, and maintaining infrastructure automation. ESENCIA","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1000000000,"posted_at":"2025-01-16","enabled":true,"skills":[{"name":"Linux","level":"High"}]}'
 ```
 ```bash
- curl -X POST http://localhost:8080/jobs -H "Content-Type: application/json" -d '{"title":"QA Engineer","description":"Test and ensure the quality of software.","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1500,"posted_at":"2025-05-15","enabled":true,"skills":[{"id":1,"level":"High"},{"name":"Automation Testing","level":"Medium"}]}'
+ curl -X POST http://localhost:8080/jobs -H "Content-Type: application/json" -d '{"title":"QA Engineer","description":"Test and ensure the quality of software.","company_name":"Tech Solutions Inc.","country":"Argentina","salary":1500,"posted_at":"2026-05-15","enabled":true,"skills":[{"id":1,"level":"High"},{"name":"Automation Testing","level":"Medium"}]}'
 ```
 
 # Dev 
