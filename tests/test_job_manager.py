@@ -334,5 +334,3 @@ class JobManagerTest(TestCase):
         response = self.client.get('/jobs', query_string=combined_filters)
         self.assertEqual(response.status_code, 200, "Failed combined filters: Status code mismatch with external source.")
         self.assertEqual(response.json['pagination']['total'], 1, "Failed combined filters with external source: Total mismatch.")
-
-        

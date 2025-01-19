@@ -30,7 +30,6 @@ def create_job():
     if validation_result:
         return validation_result
     
-
     new_job = Job(
         title=job_data['title'],
         description=job_data['description'],
@@ -65,7 +64,6 @@ def create_job():
         db.session.add(new_job_skill)
         skills_list.append(skill_instance.to_dict()) 
 
-
     # If everything went well, I commit the changes to the database.
     try:
         db.session.commit()
@@ -96,7 +94,6 @@ def get_jobs():
     # Base query for jobs
     query = Job.query.options(joinedload(Job.job_skills).joinedload(JobSkill.skill))
 
-
     # Apply the search filter if provided
     if search:
         query = query.filter((Job.description.ilike(f"%{search}%")) | (Job.title.ilike(f"%{search}%")))
@@ -124,8 +121,7 @@ def get_jobs():
     external_jobs = []  # A redis could be used
     if external_source != 'false':
         external_jobs = fetch_jobs_from_external_service(search,salary_min,salary_max,country,date_filter,company_name,skills_filter)
-
-        
+    
     # Combine both lists of jobs
     all_jobs = db_jobs + external_jobs
     
@@ -150,9 +146,6 @@ def get_jobs():
         'jobs': paginated_jobs,  # List of jobs
         'pagination': pagination_data  # Pagination info
     })
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
