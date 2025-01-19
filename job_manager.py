@@ -6,6 +6,7 @@ from math import ceil
 from lxml import etree
 from sqlalchemy.orm import joinedload
 import os
+import logging
 
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+logging.basicConfig(level=logging.INFO)
 
 url_external_source = os.getenv('URL_EXTERNAL_SOURCE', 'localhost:8081')
 
@@ -171,10 +173,10 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
     today = datetime.now().strftime('%Y-%m-%d')
     if date_filter:
         # Convertir ambas fechas a objetos datetime para comparar
-        today_date = datetime.strptime(today, '%Y-%m-%d')
+        today_date = datetime.strptime(today, '%Y-%m-%d') 
         date_filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
-        if today_date >= date_filter_date: 
-            print("Warning: Assuming the job post date from external sources is today.")
+        if date_filter_date >= today_date: 
+            logging.debug("Warning: Assuming the job post date from external sources is today.")
             return []
 
     # Call extra source service 
@@ -226,12 +228,16 @@ def fetch_jobs_from_external_service(name=None, salary_min=None, salary_max=None
         return formatted_jobs
 
     except requests.exceptions.RequestException as e:
-        print("Warning: Failed to connect to external source.")
+        logging.warning("Warning: Failed to connect to external source.")
         return []
 
 def xmlToSkill(skills_xml: str, level: str = 'Intermediate'):
     #Parse XML
-    root = etree.fromstring(skills_xml)
+    try:
+        root = etree.fromstring(skills_xml)
+    except etree.XMLSyntaxError as e:
+        logging.error(f"Error parsing XML: {e}")
+        return []
     
     # Create skill list
     skills = []

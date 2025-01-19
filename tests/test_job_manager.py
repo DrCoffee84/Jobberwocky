@@ -278,7 +278,9 @@ class JobManagerTest(TestCase):
             # Test description filter
             {'filter': {'search': 'QA'}, 'expected_total': 1, 'description': 'Search by description keyword with external source'},
             # Test posted_after filter
-            {'filter': {'posted_after': '2026-01-01'}, 'expected_total': 43, 'description': 'Search by posted date with external source'},
+            {'filter': {'posted_after': '2026-01-01'}, 'expected_total': 1, 'description': 'Search by posted date with external source'},
+            # Test posted_after filter before today
+            {'filter': {'posted_after': '2025-01-01'}, 'expected_total': 53, 'description': 'Search by posted date with external source before today'},
             # Test salary range filter (minimum salary)
             {'filter': {'salary_min': 50000}, 'expected_total': 21, 'description': 'Search by minimum salary with external source'},
             # Test salary range filter (maximum salary)
