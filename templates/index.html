@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #0065f0;
+            color: white;
+            padding: 10px;
+            display: flex;
+            position: relative;
+        }
+        header h1 {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        header:after {
+            content: '';
+            display: inline-block;
+            width: 100%;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        .form-container, .job-list-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0065f0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .job-item {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .logo-container {
+            width: 162px; 
+            height: 32px;
+            border-radius: 6px; 
+            overflow: hidden; 
+            background-color: white; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px 10px white; 
+            margin-right: 15px; 
+        }
+
+        .logo {
+            width: 162px; 
+            height: auto;
+        }
+
+        h1 {
+            margin: 0;
+            flex-grow: 1; 
+            text-align: center; 
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="https://www.avature.net/wp-content/themes/avature/img/avature-2.svg" alt="Logo de Avature" class="logo">
+        </div>
+        <h1>Jobber Wocky</h1>
+    </header>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Create a Job</h2>
+            <form id="job-form">
+                <input type="text" id="title" placeholder="Job Title" required>
+                <textarea id="description" placeholder="Job Description" required></textarea>
+                <input type="text" id="company_name" placeholder="Company Name" required>
+                <input type="text" id="country" placeholder="Country" required>
+                <input type="number" id="salary" placeholder="Salary" required>
+                <input type="date" id="posted_at" placeholder="Posted Date" required>
+                <select id="enabled">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                </select>
+                <input type="text" id="skills" placeholder="Skills (comma separated)" required>
+                <button type="submit">Create Job</button>
+            </form>
+        </div>
+        <div class="job-list-container">
+            <h2>Job Listings</h2>
+            <div id="pagination-controls">
+                <button id="prev-page">Previous</button>
+                <button id="next-page">Next</button>
+            </div>
+            <div id="job-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const jobForm = document.getElementById('job-form');
+        const jobListDiv = document.getElementById('job-list');
+        const prevButton = document.getElementById('prev-page');
+        const nextButton = document.getElementById('next-page');
+        
+        let currentPage = 1;
+        const pageSize = 10; // Number of jobs per page
+        
+        jobForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const jobData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                company_name: document.getElementById('company_name').value,
+                country: document.getElementById('country').value,
+                salary: parseInt(document.getElementById('salary').value),
+                posted_at: document.getElementById('posted_at').value,
+                enabled: document.getElementById('enabled').value === 'true',
+                skills: document.getElementById('skills').value.split(',').map(skill => ({ name: skill.trim(), level: 'Intermediate' }))
+            };
+
+            try {
+                const response = await fetch('/jobs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(jobData)
+                });
+
+                const data = await response.json();
+                if (response.status === 201) {
+                    alert('Job created successfully!');
+                    fetchJobs();  // Refresh the job list
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert('Error: Unable to create job.');
+            }
+        });
+
+        async function fetchJobs(page = 1) {
+            try {
+                const response = await fetch(`/jobs?page=${page}&per_page=${pageSize}`);
+                const data = await response.json();
+                renderJobs(data.jobs);
+                updatePaginationButtons(data.totalPages, page);
+            } catch (error) {
+                alert('Error: Unable to fetch jobs.');
+            }
+        }
+
+        function renderJobs(jobs) {
+            jobListDiv.innerHTML = '';
+            if (jobs.length === 0) {
+                jobListDiv.innerHTML = '<p>No jobs available.</p>';
+                return;
+            }
+
+            jobs.forEach(job => {
+                const jobDiv = document.createElement('div');
+                jobDiv.classList.add('job-item');
+                jobDiv.innerHTML = `
+                    <h3>${job.title}</h3>
+                    <p><strong>Country:</strong> ${job.country}</p>
+                    <p><strong>Salary:</strong> $${job.salary}</p>
+                    <p><strong>Posted At:</strong> ${job.posted_at}</p>
+                    <p><strong>Company:</strong> ${job.company_name}</p>
+                    <p><strong>Source:</strong> ${job.external}</p>
+                    <p><strong>Skills:</strong> ${job.skills.map(skill => skill.name).join(', ')}</p>
+                `;
+                jobListDiv.appendChild(jobDiv);
+            });
+        }
+
+        function updatePaginationButtons(totalPages, current) {
+            prevButton.disabled = current === 1;
+            nextButton.disabled = current === totalPages;
+        }
+
+        prevButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchJobs(currentPage);
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            currentPage++;
+            fetchJobs(currentPage);
+        });
+
+        // Fetch jobs when the page loads
+        fetchJobs(currentPage);
+    </script>
+
+</body>
+</html>
