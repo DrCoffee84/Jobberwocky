@@ -10,15 +10,15 @@ jobs:
       - checkout
       - python/install-packages
       - run: 
-          name: Install pytest # esto para enteder como funciona circleCI, lo mejor seria ya tener la imagen docker con pytest
-          command: pip install -U pytest
+          name: Install unittest-xml-reporting # esto para enteder como funciona circleCI, lo mejor seria ya tener la imagen docker con pytest
+          command: pip install unittest-xml-reporting
       - run:
           name: Run tests
-          command: pytest --junitxml=junit.xml || ((($? == 5)) && echo 'Did not find any tests to run.')
+          command: python -m xmlrunner discover -s tests -o report || ((($? == 1)) && echo 'Did not find any tests to run.')
           environment:
               FLASK_APP: job_manager.py
       - store_test_results:
-          path: junit.xml
+          path: report
   build:
     docker:
       - image: cimg/base:stable

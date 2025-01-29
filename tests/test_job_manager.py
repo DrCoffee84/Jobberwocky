@@ -1,4 +1,3 @@
-from flask import Flask
 from flask_testing import TestCase
 from job_manager import app, db
 from copy import deepcopy
@@ -227,7 +226,7 @@ class JobManagerTest(TestCase):
     #######################################
     ## 4. Create additional sources      ##
     #######################################
-    
+    '''  Esto deberia ser post deploy test y no como unit test ya que la app primero se prueba en solitario 
     # Get 42 extra soruce jobs
     def test_get_jobs_extra_source(self):
         response = self.client.get('/jobs')
@@ -333,4 +332,4 @@ class JobManagerTest(TestCase):
        
         response = self.client.get('/jobs', query_string=combined_filters)
         self.assertEqual(response.status_code, 200, "Failed combined filters: Status code mismatch with external source.")
-        self.assertEqual(response.json['pagination']['total'], 1, "Failed combined filters with external source: Total mismatch.")
+        self.assertEqual(response.json['pagination']['total'], 1, "Failed combined filters with external source: Total mismatch.")'''
