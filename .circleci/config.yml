@@ -20,12 +20,19 @@ jobs:
       - store_test_results:
           path: report
   build:
+    # For testing purposes only
+    working_directory: ~/app
     docker:
-      - image: cimg/base:stable
+      - image: cimg/base:2022.09
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: build
-          command: 'docker build -t jobberwocky .'
+          name: Build Docker image
+          command: |
+            TAG=0.1.$CIRCLE_BUILD_NUM
+            docker build -t dboullon/circleci-new-docker-example:$TAG .
 workflows:
   build-and-test:
     jobs:
